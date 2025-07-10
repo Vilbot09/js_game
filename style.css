@@ -1,0 +1,15 @@
+html {
+    height: 100%;
+    width: 100%;
+  }
+  
+  
+  #game {
+    background-color: #58586a;
+    color: #58586a;
+    margin-left: 70px;
+  }
+
+  #b {
+    z-index: 8;
+  }
