@@ -1,5 +1,5 @@
 const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const context = canvas.getContext("2d");
 
 
 const screenBorder = {xmin:0, xmax:canvas.width, ymin:0, ymax:canvas.height};
@@ -21,7 +21,7 @@ function multiplyMatrix(position, matrix) {
 
 class Camera {
     constructor() {
-        this.position = {x: 0, y: 400};
+        this.position = {x: 0, y: 200};
         this.zoom = 100;
     }
 }
@@ -38,25 +38,44 @@ class WorldObject {
     }
 }
 
+class Block extends WorldObject{
+    constructor(x, y, w, h, color) {
+        super();
+        this.position = {x: x, y: y};
+        this.width = w;
+        this.height = h;
+        this.color = color;
+    }
+
+    render(camera) {
+        const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
+        context.beginPath();
+        context.rect(screenPosition.x, screenPosition.y, this.width, this.height);
+        context.fillStyle = this.color;
+        context.fill();
+        context.closePath();
+    }
+}
+
 class GolfBall extends WorldObject {
-    constructor(color) {
+    constructor(radius, color) {
         super();
         this.color = color;
-        this.radius = 30;
+        this.radius = radius;
         this.velocity = {x: 0, y: 0}
     }
 
     render(camera) {
         // Vi kommer inte att använda world position, en matrix kommer översätta global position till lokal position, (position på skärmen)
         
-        let screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
+        const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
 
         // Drawing
-        ctx.beginPath();
-        ctx.arc(screenPosition.x, screenPosition.y, this.radius, 0, 2*Math.PI);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.closePath();
+        context.beginPath();
+        context.arc(screenPosition.x, screenPosition.y, this.radius, 0, 2*Math.PI);
+        context.fillStyle = this.color;
+        context.fill();
+        context.closePath();
     }
 
     physics() {
@@ -65,82 +84,38 @@ class GolfBall extends WorldObject {
         
         //complex collision logic should go here
 
-        if (this.position.y + this.radius > screenBorder.ymax && this.velocity.y >= 0) {
+        if (this.position.y + this.radius > 400 && this.velocity.y >= 0) {
             this.velocity.y *= -0.3;
         }
-        if (this.position.y + this.radius < screenBorder.ymax) {
+        if (this.position.y + this.radius < 400) {
             this.velocity.y += 1;
         }
        // else{this.velocity.y-=0.8;}
     }
 }
 
-class ImageObject {
-    constructor (x, y, image){
-        this.x = x;
-        this.y = y;
-        this.image = image;
-    }
 
-    render() {
-        ctx.drawImage(this.image, this.x, this.y, 40, 40);
-    } 
-};
-
-class CanvasObject {
-    constructor(x, y, w, h, color, shape) {
-        this.x = x;
-        this.y = y;
-        this.w = w;
-        this.h = h;
-        this.color = color;
-        this.shape = shape;
-    }   
-
-    render() {
-        if (this.shape === "rectangle") {
-            ctx.beginPath();
-            ctx.rect(this.x, this.y, this.w, this.h);
-            ctx.fillStyle = this.color;
-            ctx.fill();
-            ctx.closePath();
-        }
-        /*else if (this.shape === "circle") {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y);
-            ctx.fillStyle = this.color;
-            ctx.fill();
-            ctx.closePath();
-        }*/
-    }
-};
-
-/*this only compares two objects, would probably be extremely inefficient 
-to use something like this for the entire collision system*/
-function areOverlapping(obj1, obj2) {
-    if ((obj1.x < obj2.x + obj2.w && obj1.x + obj1.w > obj2.x) && (obj1.y < obj2.y + obj2.h && obj1.y + obj1.h > obj2.h)){
-        return true;
-    }
-
-    else{
-        return false;
-    }
-}
 
 const camera = new Camera();
-const golfBall = new GolfBall("red");
+
+const block = new Block(-250, 400, 500, 50, "black");
+const golfBall = new GolfBall(10, "white");
 
 const perfectFrameTime = 1000 / 60;
 let deltaTime = 0;
 let lastTimestamp = Date.now();
 
 function update() {
-    deltaTime = (Date.now() - lastTimestamp) / perfectFrameTime;
+    deltaTime = (Date.now() - lastTimestamp);
     lastTimestamp = Date.now();
 
-    ctx.clearRect(0, 0, 1200, 600);
-
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#00aaff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    block.render(camera);
     golfBall.render(camera);
+
     golfBall.physics();
     requestAnimationFrame(update);
 };
