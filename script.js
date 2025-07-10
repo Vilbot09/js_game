@@ -1,59 +1,81 @@
-const game = document.getElementById("game");
-const ctx = game.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-const sun_image = new Image();
-sun_image.src = "images/sun.png";
 
-const Canvas_Objects = [];
-const Image_Objects = [];
-const Static_Scene_Objects = [];
-const Moving_Scene_Objects = [];
+const screenBorder = {xmin:0, xmax:canvas.width, ymin:0, ymax:canvas.height};
 
-const screen_border = {xmin:0, xmax:game.width, ymin:0, ymax:game.height};
+function worldMatrix(camera) {
+    return [
+        [ 1, 0 ],
+        [ 0, 1 ],
+        [ -camera.position.x + canvas.width/2, -camera.position.y + canvas.height/2]
+    ];
+}
 
-document.addEventListener("keydown", keyDownHandler, false);
-document.addEventListener("keyup", keyUpHandler, false);
+function multiplyMatrix(position, matrix) {
+    let newPos = {x: 0, y: 0};
+    newPos.x = matrix[0][0] * position.x + matrix[1][0] * position.y + matrix[2][0];
+    newPos.y = matrix[0][1] * position.x + matrix[1][1] * position.y + matrix[2][1];
+    return newPos;
+}
 
-let right_pressed = false;
-let left_pressed = false;
-let up_pressed = false;
-let down_pressed = false;
-
-function keyDownHandler(e) {
-    if (e.code == "ArrowRight" || e.code == "Right") {
-        right_pressed = true;
+class Camera {
+    constructor() {
+        this.position = {x: 0, y: 400};
+        this.zoom = 100;
     }
-    if (e.code == "ArrowLeft" || e.code == "Left") {
-        left_pressed = true;
-    }
-    if (e.code == "ArrowUp" || e.code == "Up") {
-        up_pressed = true;
-    }
-    if (e.code == "ArrowDown" || e.code == "Down") {
-        down_pressed = true;
-    }
-};
+}
 
-function keyUpHandler(e) {
-    if (e.code == "ArrowRight" || e.code == "Right") {
-        right_pressed = false;
+class Level {
+    constructor() {
+        
     }
-    if (e.code == "ArrowLeft" || e.code == "Left") {
-        left_pressed = false;
-    }
-    if (e.code == "ArrowUp" || e.code == "Up") {
-        up_pressed = false;
-    }
-    if (e.code == "ArrowDown" || e.code == "Down") {
-        down_pressed = false;
-    }
-};
+}
 
-class Background {
+class WorldObject {
+    constructor() {
+        this.position = {x: 0, y: 0};
+    }
+}
 
-};
+class GolfBall extends WorldObject {
+    constructor(color) {
+        super();
+        this.color = color;
+        this.radius = 30;
+        this.velocity = {x: 0, y: 0}
+    }
 
-class Image_Object {
+    render(camera) {
+        // Vi kommer inte att använda world position, en matrix kommer översätta global position till lokal position, (position på skärmen)
+        
+        let screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
+
+        // Drawing
+        ctx.beginPath();
+        ctx.arc(screenPosition.x, screenPosition.y, this.radius, 0, 2*Math.PI);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    physics() {
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+        
+        //complex collision logic should go here
+
+        if (this.position.y + this.radius > screenBorder.ymax && this.velocity.y >= 0) {
+            this.velocity.y *= -0.3;
+        }
+        if (this.position.y + this.radius < screenBorder.ymax) {
+            this.velocity.y += 1;
+        }
+       // else{this.velocity.y-=0.8;}
+    }
+}
+
+class ImageObject {
     constructor (x, y, image){
         this.x = x;
         this.y = y;
@@ -65,7 +87,7 @@ class Image_Object {
     } 
 };
 
-class Canvas_Object {
+class CanvasObject {
     constructor(x, y, w, h, color, shape) {
         this.x = x;
         this.y = y;
@@ -76,74 +98,26 @@ class Canvas_Object {
     }   
 
     render() {
-        ctx.beginPath();
-        ctx.rect(this.x, this.y, this.w, this.h);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.closePath();
+        if (this.shape === "rectangle") {
+            ctx.beginPath();
+            ctx.rect(this.x, this.y, this.w, this.h);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.closePath();
+        }
+        /*else if (this.shape === "circle") {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.closePath();
+        }*/
     }
-};
-
-class Static_Scene_Image_Object {
-
-};
-
-class Static_Scene_Canvas_Object extends Canvas_Object {
-
-};
-
-class Moving_Scene_Object {
-    
-};
-
-class Player_Object {
-    constructor(x, y, w, h, color, shape) {
-        this.x = x;
-        this.y = y;
-        this.w = w;
-        this.h = h;
-        this.color = color;
-        this.shape = shape;
-        this.speed = 20
-    }   
-
-    show() {
-        ctx.beginPath();
-        ctx.rect(this.x, this.y, this.w, this.h);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.closePath();
-    }
-};
-
-class Collision_node {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-
-        this.w = 100;
-        this.h = 100;
-    };
-
-    update_contents() {
-
-    };
-};
-
-function render_background_objects() {
-    for (let i = 0; i < Canvas_Objects.length; i++) {
-        Canvas_Objects[i].render();
-
-    };
-
-    for (let i = 0; i < Image_Objects.length; i++) {
-        Image_Objects[i].render();
-    };
 };
 
 /*this only compares two objects, would probably be extremely inefficient 
 to use something like this for the entire collision system*/
-function are_overlapping(obj1, obj2) {
+function areOverlapping(obj1, obj2) {
     if ((obj1.x < obj2.x + obj2.w && obj1.x + obj1.w > obj2.x) && (obj1.y < obj2.y + obj2.h && obj1.y + obj1.h > obj2.h)){
         return true;
     }
@@ -153,58 +127,30 @@ function are_overlapping(obj1, obj2) {
     }
 }
 
-function player_input() {
-    if (right_pressed) {
-        player.x += player.speed*deltaTime;
-    }
-
-    if (left_pressed) {
-        player.x -= player.speed*deltaTime;
-    }
-
-    if (up_pressed) {
-        player.y -= player.speed*deltaTime;
-    }
-
-    if (down_pressed) {
-        player.y += player.speed*deltaTime;
-    }
-};
-
-function input_handler() {
-    player_input();
-};
-
-function physics_engine() {
-
-};
-
-Canvas_Objects.push(new Canvas_Object(50, 50, 100, 100, "blue", "square"));
-
-sun_image.onload = function () {
-    Image_Objects.push(new Image_Object(100, 100, sun_image));
-};
-const player = new Player_Object(20, 20, 100, 100, "red", "square");
-
-
+const camera = new Camera();
+const golfBall = new GolfBall("red");
 
 const perfectFrameTime = 1000 / 60;
 let deltaTime = 0;
 let lastTimestamp = Date.now();
 
-function gameLoop() {
+function update() {
     deltaTime = (Date.now() - lastTimestamp) / perfectFrameTime;
     lastTimestamp = Date.now();
 
-    ctx.clearRect(0, 0, 1200, 600);;
-    render_background_objects();
-    player.show();
+    ctx.clearRect(0, 0, 1200, 600);
 
-    input_handler();
-    physics_engine();
-
-    requestAnimationFrame(gameLoop);
+    golfBall.render(camera);
+    golfBall.physics();
+    requestAnimationFrame(update);
 };
   
-  
-gameLoop();
+update();
+
+document.addEventListener("keydown", (e) => {
+
+});
+document.addEventListener("keyup", (e) => {
+
+});
+
