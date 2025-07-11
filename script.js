@@ -2,12 +2,35 @@ const canvas = document.getElementById("game");
 const context = canvas.getContext("2d");
 
 
-const screenBorder = {xmin:0, xmax:canvas.width, ymin:0, ymax:canvas.height};
+const screenBorder = {xmin:-0.5*canvas.width, xmax:0.5*canvas.width, ymin:-0.5*canvas.height, ymax:0.5*canvas.height};
+
+const worldObjects = [];
+
+//Physics related constants and variables
+const elasticity = 0.8;
+const minimumBounce = 2;
+const friction = 1;
+const airResistance = 0;
+const wind = 0;
+
+//This is useful for debugging, clicking on the canvas places the ball at the position of the mouse
+canvas.onmousedown = function(event) {
+
+
+    golfBall.position.x = event.clientX;
+    golfBall.position.y = event.clientY;
+    golfBall.velocity = {x:0, y:0}
+
+    golfBall.position = multiplyMatrix(golfBall.position, inverseWorldMatrix(camera))
+    golfBall.position.x -= 75;
+
+    //console.log(golfBall.position)
+}
 
 function worldMatrix(camera) {
     return [
         [ 1, 0 ],
-        [ 0, 1 ],
+        [ 0, -1 ],
         [ -camera.position.x + canvas.width/2, -camera.position.y + canvas.height/2]
     ];
 }
@@ -19,9 +42,22 @@ function multiplyMatrix(position, matrix) {
     return newPos;
 }
 
+//returns an inversed matrix of the worldMatrix
+function inverseWorldMatrix(camera) {
+    return [
+        [1, 0],
+        [0, -1],
+        [
+            -camera.position.x - canvas.width / 2,
+            -(camera.position.y - canvas.height / 2)
+        ]
+    ];
+}
+
+
 class Camera {
     constructor() {
-        this.position = {x: 0, y: 200};
+        this.position = {x: 0, y: 0};
         this.zoom = 100;
     }
 }
@@ -78,18 +114,24 @@ class GolfBall extends WorldObject {
         context.closePath();
     }
 
-    physics() {
+    physics(delta) {
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
         
         //complex collision logic should go here
 
-        if (this.position.y + this.radius > 400 && this.velocity.y >= 0) {
-            this.velocity.y *= -0.3;
+        if (this.position.y - this.radius < screenBorder.ymin+50 && this.velocity.y <= 0) {
+            this.velocity.y = 2*Math.sqrt(Math.abs(this.velocity.y))-1;
+
+            if (Math.abs(this.velocity.y) < minimumBounce) {
+                this.velocity.y = 0;
+                this.position.y = screenBorder.ymin+50+this.radius;
+            }
         }
-        if (this.position.y + this.radius < 400) {
-            this.velocity.y += 1;
+        if (this.position.y - this.radius >= screenBorder.ymin+50) {
+            this.velocity.y -= 0.2*delta;
         }
+        
        // else{this.velocity.y-=0.8;}
     }
 }
@@ -98,7 +140,7 @@ class GolfBall extends WorldObject {
 
 const camera = new Camera();
 
-const block = new Block(-250, 400, 500, 50, "black");
+const block = new Block(-250, -250, 500, 50, "black");
 const golfBall = new GolfBall(10, "white");
 
 const perfectFrameTime = 1000 / 60;
@@ -107,6 +149,7 @@ let lastTimestamp = Date.now();
 
 function update() {
     deltaTime = (Date.now() - lastTimestamp);
+    deltaTime /= perfectFrameTime; 
     lastTimestamp = Date.now();
 
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -116,11 +159,12 @@ function update() {
     block.render(camera);
     golfBall.render(camera);
 
-    golfBall.physics();
+    golfBall.physics(deltaTime);
     requestAnimationFrame(update);
 };
   
 update();
+console.log(inverseWorldMatrix(camera));
 
 document.addEventListener("keydown", (e) => {
 
