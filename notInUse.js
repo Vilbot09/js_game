@@ -49,4 +49,18 @@ function areOverlapping(obj1, obj2) {
         return false;
     }
 }
+ context.beginPath();
+        context.moveTo(this.position.x, this.position.y)
 
+        let penX = screenPosition.x;
+        let penY = screenPosition.y;
+        let angle =  Math.PI*(180-((180 * (this.edges - 2)) / this.edges))/180;
+        for (let i = 0; i < this.edges + 1; i++) {
+            penX += Math.cos(angle*i)*this.sidelength; 
+            penY += Math.sin(angle*i)*this.sidelength;
+            context.lineTo(penX, penY);
+        }
+
+
+        context.fillStyle = this.color;
+        context.fill();

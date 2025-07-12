@@ -40,8 +40,8 @@ function worldMatrix(camera) {
 
 function multiplyMatrix(position, matrix) {
     let newPos = {x: 0, y: 0};
-    newPos.x = matrix[0][0] * position.x + matrix[1][0] * position.y + matrix[2][0];
-    newPos.y = matrix[0][1] * position.x + matrix[1][1] * position.y + matrix[2][1];
+    newPos.x = matrix[0][0] * position.x + matrix[0][1] * position.y + matrix[2][0];
+    newPos.y = matrix[1][0] * position.x + matrix[1][1] * position.y + matrix[2][1];
     return newPos;
 }
 
@@ -86,21 +86,104 @@ class WorldObject {
 }
 
 class Block extends WorldObject{
-    constructor(x, y, w, h, color) {
+    constructor(x, y, w, h, color, type) {
         super();
         this.position = {x: x, y: y};
         this.width = w;
         this.height = h;
         this.color = color;
+        this.type = type
     }
 
     render(camera) {
         const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
+            
+            context.beginPath();
+            context.rect(screenPosition.x, screenPosition.y, this.width, this.height);
+            context.fillStyle = this.color;
+            context.fill();
+            context.closePath();
+        
+    }
+    //this is how to rotate an object
+    rotate(screenPosition, rotation) {
+        context.save();
+        context.translate(screenPosition.x + this.width/2, screenPosition.y+this.height/2);
+        context.rotate(rotation);
+        context.fillStyle = this.color;
+        context.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+        context.restore(); 
+    }
+}
+
+class RegularPolygon extends WorldObject{
+    constructor(x, y, sidelength, edges, color) {
+        super();
+        this.position = {x: x, y: y};
+        this.sidelength = sidelength;
+        this.color = color;
+        this.edges = edges;
+        this.vertices = []
+
+        const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
+        let penX = screenPosition.x;
+        let penY = screenPosition.y;
+        let angle =  Math.PI*(180-((180 * (this.edges - 2)) / this.edges))/180;
+        for (let i = 0; i < this.edges + 1; i++) {
+            penX += Math.cos(angle*i)*this.sidelength; 
+            penY += Math.sin(angle*i)*this.sidelength;
+            this.vertices.push({x:penX, y:penY})
+        }
+    }
+
+    render(camera) {
+        const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
+        
         context.beginPath();
-        context.rect(screenPosition.x, screenPosition.y, this.width, this.height);
+        context.moveTo(screenPosition.x, screenPosition.y)
+
+        for (let i = 0; i < this.vertices.length; i++) {
+            context.lineTo(this.vertices[i].x, this.vertices[i].y);
+        } 
+
         context.fillStyle = this.color;
         context.fill();
-        context.closePath();
+        
+    }
+    //this is how to rotate an object
+    rotate(screenPosition, rotation) {
+        context.save();
+        context.translate(screenPosition.x + this.width/2, screenPosition.y+this.height/2);
+        context.rotate(rotation);
+        context.fillStyle = this.color;
+        context.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+        context.restore(); 
+    }
+}
+
+class IrregularPolygon extends WorldObject{
+    constructor(x, y, vertices, color) {
+        super();
+        this.position = {x: x, y: y};
+        this.vertices = vertices;
+        this.color = color;
+        
+    }
+
+    render(camera) {
+        const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
+        
+        context.beginPath();
+        context.moveTo(screenPosition.x, screenPosition.y)
+
+        let vertex = {}
+        for (let i = 0; i < this.vertices.length; i++) {
+            vertex = multiplyMatrix(this.vertices[i], worldMatrix(camera));
+            context.lineTo(vertex.x, vertex.y);
+        } 
+       
+        context.fillStyle = this.color;
+        context.fill();
         
     }
     //this is how to rotate an object
@@ -176,6 +259,11 @@ class GolfBall extends WorldObject {
 const camera = new Camera();
 
 const block = new Block(-250, -250, 500, 50, "black");
+
+const polygon = new RegularPolygon(150, 150, 50, 5, "black");
+
+const irregularPolygon = new IrregularPolygon(-100, 0, [{x:-50, y:0}, {x:-75, y:-200}, {x: -100, y:0}], "red")
+
 blockArray.push(block)
 const golfBall = new GolfBall(10, "white");
 
@@ -193,6 +281,8 @@ function update() {
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     block.render(camera);
+    polygon.render(camera);
+    irregularPolygon.render(camera);
     golfBall.render(camera);
 
     golfBall.physics(deltaTime);
@@ -200,7 +290,6 @@ function update() {
 };
   
 update();
-console.log(inverseWorldMatrix(camera));
 
 document.addEventListener("keydown", (e) => {
 
