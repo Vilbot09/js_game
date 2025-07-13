@@ -8,7 +8,7 @@ const blockArray = [];
 
 //Physics related constants and variables
 const gameSpeed = 1;
-const gravityConstant = 1;
+let gravityConstant = 1;
 const elasticity = 0.4;
 const minimumBounce = 3;
 const friction = 1;
@@ -261,14 +261,14 @@ class GolfBall extends WorldObject {
     collision(delta) {
         let pos = this.position;
 
-
+        //for every object you are checking with
         for (let i = 0; i < blockArray.length; i++) {
             let polygon = blockArray[i];
             
             let axes = [...polygon.edgeNormals];
             
             
-            let distance = 1000000;
+            let distance = Infinity;
             let closestVertex = {}
             for (let i = 0; i < polygon.vertices.length; i++) {
                 let deltaX = pos.x - polygon.vertices[i].x;
@@ -281,11 +281,20 @@ class GolfBall extends WorldObject {
             }
 
             axes.push(calculateEdgeNormal(this.position, closestVertex));
+            //Now we have all the axes, the ones the polygon already knows,  
+            //as well as the one between the circle center and nearest polygon vertex
 
+            //so we can break out of the checking loop in certain cases
             let collision = true;
+            let overlap = Infinity;
+            let minimumTranslationVector = {x: 0, y: 0}
+
+            //check for every axis
             for (let i = 0; i < axes.length; i++) {
                 let axis = axes[i];
 
+                //Project the polygon, and then the circle onto a line, and compare there min and max values
+                //to check for a separating axis, if we cant find any, the objects are colliding
                 let minPoly = Infinity;
                 let maxPoly = -Infinity;
                 for (let j = 0; j < polygon.vertices.length; j++) {
@@ -299,14 +308,33 @@ class GolfBall extends WorldObject {
                 let minCircle = centerDot - this.radius;
                 let maxCircle = centerDot + this.radius;
 
-                if (maxPoly < minCircle || maxCircle < minPoly) {
+                if (maxPoly <= minCircle || maxCircle <= minPoly) {
                     collision = false;
                     break;
+                }
+                else {
+                    let newOverlap = 0;
+                    if (minCircle < minPoly) {
+                        newOverlap = Math.abs(maxCircle - minPoly);
+                    }
+                    if (maxCircle > maxPoly) {
+                        newOverlap = Math.abs(minCircle - maxPoly);
+                    }
+                    else {
+                        newOverlap = Math.min(Math.abs(maxCircle - minCircle), Math.abs(maxPoly - minPoly));
+                    }
+                    if (newOverlap < overlap){
+                        overlap = newOverlap;
+
+                        minimumTranslationVector = axis;
+                    }
                 }
 
             }
             if (collision) {
+               this.velocity.x = 0;
                this.velocity.y = 0;
+               
             }
 
         }
