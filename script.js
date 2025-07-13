@@ -25,9 +25,6 @@ canvas.onmousedown = function(event) {
 
     golfBall.position = multiplyMatrix(golfBall.position, inverseWorldMatrix(camera))
     golfBall.position.x -= 75;
-   //golfBall.position = multiplyMatrix2x2(golfBall.position, [[0, 1], [-1, 0]]), would place the ball 90 degrees rotated 
-   //around the middle of the canvas (0, 0)
-
 }
 
 function worldMatrix(camera) {
@@ -105,7 +102,7 @@ class Block extends WorldObject{
             context.closePath();
         
     }
-    //this is how to rotate an object
+    //this is how to rotate a rectangle
     rotate(screenPosition, rotation) {
         context.save();
         context.translate(screenPosition.x + this.width/2, screenPosition.y+this.height/2);
@@ -124,7 +121,8 @@ class RegularPolygon extends WorldObject{
         this.color = color;
         this.edges = edges;
         this.vertices = [];
-        this.cameraVertices = []
+        this.cameraVertices = [];
+        this.edgeNormals = [];
 
         const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
         let penX = screenPosition.x;
@@ -136,6 +134,12 @@ class RegularPolygon extends WorldObject{
             this.cameraVertices.push({x:penX, y:penY});
             this.vertices.push(multiplyMatrix({x:penX, y:penY}, inverseWorldMatrix(camera)));
         }
+        
+        for(let i = 0; i < this.vertices.length-1; i++) {
+            this.edgeNormals.push(calculateEdgeNormal(this.vertices[i], this.vertices[i+1]))
+        }
+         this.edgeNormals.push(calculateEdgeNormal(this.vertices[0], this.vertices[this.vertices.length-1]))
+
     }
 
     render(camera) {
@@ -164,7 +168,7 @@ class RegularPolygon extends WorldObject{
 
     }
 
-    //this is how to rotate an object
+    //this is how to rotate a rectangle
     rotate(screenPosition, rotation) {
         context.save();
         context.translate(screenPosition.x + this.width/2, screenPosition.y+this.height/2);
@@ -181,6 +185,11 @@ class IrregularPolygon extends WorldObject{
         this.position = {x: x, y: y};
         this.vertices = vertices;
         this.color = color;
+        this.edgeNormals = [];
+        for(let i = 0; i < this.vertices.length-1; i++) {
+            this.edgeNormals.push(calculateEdgeNormal(this.vertices[i], this.vertices[i+1]))
+        }
+         this.edgeNormals.push(calculateEdgeNormal(this.vertices[0], this.vertices[this.vertices.length-1]))
         
     }
 
@@ -208,7 +217,7 @@ class IrregularPolygon extends WorldObject{
         }
         drawLine(this.vertices[0], this.vertices[this.vertices.length-1])
     }
-    //this is how to rotate an object
+    //this is how to rotate a rectangle
     rotate(screenPosition, rotation) {
         context.save();
         context.translate(screenPosition.x + this.width/2, screenPosition.y+this.height/2);
@@ -250,15 +259,54 @@ class GolfBall extends WorldObject {
     }
     
     collision(delta) {
-        let posX = this.position.x;
-        let posY = this.position.y;
-        let velX = this.velocity.x;
-        let velY = this.velocity.y;
-        let r = this.radius
+        let pos = this.position;
+
 
         for (let i = 0; i < blockArray.length; i++) {
-            for (let i = 0; i < blockArray[i].vertices; i++) {
+            let polygon = blockArray[i];
+            
+            let axes = [...polygon.edgeNormals];
+            
+            
+            let distance = 1000000;
+            let closestVertex = {}
+            for (let i = 0; i < polygon.vertices.length; i++) {
+                let deltaX = pos.x - polygon.vertices[i].x;
+                let deltaY = pos.y - polygon.vertices[i].y;
+                
+                if (distance > Math.sqrt(deltaX ** 2 + deltaY ** 2)) {
+                    distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+                    closestVertex = polygon.vertices[i];
+                }
+            }
 
+            axes.push(calculateEdgeNormal(this.position, closestVertex));
+
+            let collision = true;
+            for (let i = 0; i < axes.length; i++) {
+                let axis = axes[i];
+
+                let minPoly = Infinity;
+                let maxPoly = -Infinity;
+                for (let j = 0; j < polygon.vertices.length; j++) {
+                    let vertex = polygon.vertices[j];
+                    let dot = vertex.x * axis.x + vertex.y * axis.y;
+                    minPoly = Math.min(minPoly, dot);
+                    maxPoly = Math.max(maxPoly, dot);
+                }
+
+                let centerDot = pos.x * axis.x + pos.y * axis.y;
+                let minCircle = centerDot - this.radius;
+                let maxCircle = centerDot + this.radius;
+
+                if (maxPoly < minCircle || maxCircle < minPoly) {
+                    collision = false;
+                    break;
+                }
+
+            }
+            if (collision) {
+               this.velocity.y = 0;
             }
 
         }
@@ -286,6 +334,15 @@ function drawLine(point1, point2) {
 
 
 
+function calculateEdgeNormal(point1, point2) {
+    let deltaX = point2.x - point1.x;
+    let deltaY = point2.y - point1.y;
+    let distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+    return {x: deltaY / distance, y: -deltaX / distance};
+
+}
+
+
 const camera = new Camera();
 
 const block = new Block(-250, -250, 500, 50, "black");
@@ -294,7 +351,8 @@ const polygon = new RegularPolygon(150, 150, 50, 5, "green");
 
 const irregularPolygon = new IrregularPolygon(0, 0, [{x:-50, y:0}, {x:-75, y:-200}, {x: 0, y:0}], "blue")
 
-blockArray.push(block)
+blockArray.push(polygon)
+blockArray.push(irregularPolygon)
 const golfBall = new GolfBall(10, "white");
 
 const perfectFrameTime = 1000 / 60;
