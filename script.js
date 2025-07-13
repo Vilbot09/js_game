@@ -10,7 +10,7 @@ const blockArray = [];
 const gameSpeed = 1;
 const gravityConstant = 1;
 const elasticity = 0.4;
-const minimumBounce = 5;
+const minimumBounce = 3;
 const friction = 1;
 const airResistance = 0;
 const wind = 0;
@@ -123,16 +123,18 @@ class RegularPolygon extends WorldObject{
         this.sidelength = sidelength;
         this.color = color;
         this.edges = edges;
-        this.vertices = []
+        this.vertices = [];
+        this.cameraVertices = []
 
         const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
         let penX = screenPosition.x;
         let penY = screenPosition.y;
         let angle =  Math.PI*(180-((180 * (this.edges - 2)) / this.edges))/180;
-        for (let i = 0; i < this.edges + 1; i++) {
+        for (let i = 1; i < this.edges + 1; i++) {
             penX += Math.cos(angle*i)*this.sidelength; 
             penY += Math.sin(angle*i)*this.sidelength;
-            this.vertices.push({x:penX, y:penY})
+            this.cameraVertices.push({x:penX, y:penY});
+            this.vertices.push(multiplyMatrix({x:penX, y:penY}, inverseWorldMatrix(camera)));
         }
     }
 
@@ -142,14 +144,26 @@ class RegularPolygon extends WorldObject{
         context.beginPath();
         context.moveTo(screenPosition.x, screenPosition.y)
 
-        for (let i = 0; i < this.vertices.length; i++) {
-            context.lineTo(this.vertices[i].x, this.vertices[i].y);
+        for (let i = 0; i < this.cameraVertices.length; i++) {
+            context.lineTo(this.cameraVertices[i].x, this.cameraVertices[i].y);
         } 
 
         context.fillStyle = this.color;
         context.fill();
+        this.drawVertices();
         
     }
+    drawVertices() {
+        
+
+        for (let i = 0; i < this.vertices.length-1; i++) {
+            drawLine(this.vertices[i], this.vertices[i+1]);
+        }
+        drawLine(this.vertices[0], this.vertices[this.vertices.length-1])
+
+
+    }
+
     //this is how to rotate an object
     rotate(screenPosition, rotation) {
         context.save();
@@ -184,7 +198,15 @@ class IrregularPolygon extends WorldObject{
        
         context.fillStyle = this.color;
         context.fill();
+        this.drawVertices();
         
+    }
+
+    drawVertices() {
+        for (let i = 0; i < this.vertices.length-1; i++) {
+            drawLine(this.vertices[i], this.vertices[i+1]);
+        }
+        drawLine(this.vertices[0], this.vertices[this.vertices.length-1])
     }
     //this is how to rotate an object
     rotate(screenPosition, rotation) {
@@ -221,7 +243,7 @@ class GolfBall extends WorldObject {
     physics(delta) {
         this.position.x += this.velocity.x * delta * gameSpeed;
         this.position.y += this.velocity.y * delta * gameSpeed;
-        this.velocity.y -= gravityConstant*delta*gameSpeed;
+        this.velocity.y -= gravityConstant * delta * gameSpeed;
 
         this.collision(delta);
 
@@ -235,23 +257,31 @@ class GolfBall extends WorldObject {
         let r = this.radius
 
         for (let i = 0; i < blockArray.length; i++) {
-            let boxX = blockArray[i].position.x;
-            let boxY = blockArray[i].position.y;
-            let boxW = blockArray[i].width;
-            let boxH = blockArray[i].height;
+            for (let i = 0; i < blockArray[i].vertices; i++) {
 
-            if ((posY+r >= boxY-boxH && posY-r <= boxY) && (posX+r >= boxX && posX-r <= boxX+boxW)) {
-                this.position.y -= this.velocity.y*delta*gameSpeed;
-                this.velocity.y *= -elasticity; 
-
-                if (Math.abs(velY) < minimumBounce) {
-                    this.velocity.y = 0;
-                    this.position.y = boxY + this.radius;
-                }
             }
 
         }
     }
+}
+
+function drawLine(point1, point2) {
+    let deltaX = point2.x - point1.x;
+    let deltaY = point2.y - point1.y;
+    let k = deltaY/deltaX;
+    let m = point1.y - point1.x*k
+    let firstPoint = {x: -1000, y:-1000*k+m}
+    let secondPoint = {x: 1000, y:1000*k+m}
+    firstPoint = multiplyMatrix(firstPoint, worldMatrix(camera))
+    secondPoint = multiplyMatrix(secondPoint, worldMatrix(camera))
+
+    
+    context.beginPath();
+    context.moveTo(firstPoint.x, firstPoint.y);
+    context.lineTo(secondPoint.x, secondPoint.y);
+    context.strokeStyle = "red";
+    context.stroke();
+    context.closePath();
 }
 
 
@@ -260,9 +290,9 @@ const camera = new Camera();
 
 const block = new Block(-250, -250, 500, 50, "black");
 
-const polygon = new RegularPolygon(150, 150, 50, 5, "black");
+const polygon = new RegularPolygon(150, 150, 50, 5, "green");
 
-const irregularPolygon = new IrregularPolygon(-100, 0, [{x:-50, y:0}, {x:-75, y:-200}, {x: -100, y:0}], "red")
+const irregularPolygon = new IrregularPolygon(0, 0, [{x:-50, y:0}, {x:-75, y:-200}, {x: 0, y:0}], "blue")
 
 blockArray.push(block)
 const golfBall = new GolfBall(10, "white");
@@ -279,7 +309,6 @@ function update() {
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#00aaff";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    
     block.render(camera);
     polygon.render(camera);
     irregularPolygon.render(camera);
