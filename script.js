@@ -8,9 +8,9 @@ const blockArray = [];
 
 //Physics related constants and variables
 const gameSpeed = 1;
-let gravityConstant = 1;
+const gravityConstant = 1;
 const elasticity = 0.4;
-const minimumBounce = 3;
+const minimumBounce = 2;
 const friction = 1;
 const airResistance = 0;
 const wind = 0;
@@ -78,7 +78,7 @@ class Level {
 
 class WorldObject {
     constructor() {
-        this.position = {x: 0, y: 0};
+        this.position = {x: -100, y: 100};
     }
 }
 
@@ -254,7 +254,15 @@ class GolfBall extends WorldObject {
         this.position.y += this.velocity.y * delta * gameSpeed;
         this.velocity.y -= gravityConstant * delta * gameSpeed;
 
-        this.collision(delta);
+        let resolutionAxis = this.collision();
+        if (resolutionAxis) {
+            this.position.x += 1 * resolutionAxis.x;
+            this.position.y += 1 * resolutionAxis.y;
+             
+            if (Math.abs(this.velocity.y * delta * gameSpeed < minimumBounce)) {
+                this.velocity.y *= -elasticity;
+            } 
+        }
 
     }
     
@@ -332,9 +340,7 @@ class GolfBall extends WorldObject {
 
             }
             if (collision) {
-               this.velocity.x = 0;
-               this.velocity.y = 0;
-               
+              return minimumTranslationVector;            
             }
 
         }
@@ -366,7 +372,7 @@ function calculateEdgeNormal(point1, point2) {
     let deltaX = point2.x - point1.x;
     let deltaY = point2.y - point1.y;
     let distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
-    return {x: deltaY / distance, y: -deltaX / distance};
+    return {x: -deltaY / distance, y: deltaX / distance};
 
 }
 
@@ -377,7 +383,8 @@ const block = new Block(-250, -250, 500, 50, "black");
 
 const polygon = new RegularPolygon(150, 150, 50, 5, "green");
 
-const irregularPolygon = new IrregularPolygon(0, 0, [{x:-50, y:0}, {x:-75, y:-200}, {x: 0, y:0}], "blue")
+//You have to manually add all of the points, you need to add them clockwise, else collision breaks
+const irregularPolygon = new IrregularPolygon(0, 0, [{x:-75, y:-200}, {x:-50, y:0}, {x: 0, y:0}], "blue")
 
 blockArray.push(polygon)
 blockArray.push(irregularPolygon)
