@@ -138,7 +138,7 @@ class RegularPolygon extends WorldObject{
         for(let i = 0; i < this.vertices.length-1; i++) {
             this.edgeNormals.push(calculateEdgeNormal(this.vertices[i], this.vertices[i+1]))
         }
-         this.edgeNormals.push(calculateEdgeNormal(this.vertices[0], this.vertices[this.vertices.length-1]))
+         this.edgeNormals.push(calculateEdgeNormal(this.vertices[this.vertices.length-1], this.vertices[0]))
 
     }
 
@@ -189,7 +189,7 @@ class IrregularPolygon extends WorldObject{
         for(let i = 0; i < this.vertices.length-1; i++) {
             this.edgeNormals.push(calculateEdgeNormal(this.vertices[i], this.vertices[i+1]))
         }
-         this.edgeNormals.push(calculateEdgeNormal(this.vertices[0], this.vertices[this.vertices.length-1]))
+         this.edgeNormals.push(calculateEdgeNormal(this.vertices[this.vertices.length-1], this.vertices[0]));
         
     }
 
@@ -343,7 +343,7 @@ class GolfBall extends WorldObject {
                 }
 
             }
-            if (collision) {
+            if (collision && overlap > 0.0001) {
               return minimumTranslationVector;            
             }
 
@@ -354,6 +354,9 @@ class GolfBall extends WorldObject {
 function drawLine(point1, point2) {
     let deltaX = point2.x - point1.x;
     let deltaY = point2.y - point1.y;
+    if (deltaX === 0) {
+        deltaX = 0.01;
+    }
     let k = deltaY/deltaX;
     let m = point1.y - point1.x*k
     let firstPoint = {x: -1000, y:-1000*k+m}
@@ -381,18 +384,24 @@ function calculateEdgeNormal(point1, point2) {
 }
 
 
+function vertexSortingAlgorithm() {
+
+};
+
+const golfBall = new GolfBall(10, "white");
 const camera = new Camera();
 
-const block = new Block(-250, -250, 500, 50, "black");
-
+//you only need to specify position, sidelength and number of edges
 const polygon = new RegularPolygon(150, 150, 50, 4, "green");
 
 //You have to manually add all of the points, you need to add them clockwise, else collision breaks
-const irregularPolygon = new IrregularPolygon(0, 0, [{x:-400, y:-100}, {x:-50, y:0}, {x: 0, y:0}], "blue")
+const irregularPolygon = new IrregularPolygon(-100, 0, [{x:100, y:-200}, {x:-400, y:-200}, {x: -100, y:0}], "blue")
 
 blockArray.push(polygon)
 blockArray.push(irregularPolygon)
-const golfBall = new GolfBall(10, "white");
+blockArray.push(new RegularPolygon(80, 2, 50, 5, "red"));
+
+
 
 const perfectFrameTime = 1000 / 60;
 let deltaTime = 0;
@@ -406,9 +415,9 @@ function update() {
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#00aaff";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    block.render(camera);
-    polygon.render(camera);
-    irregularPolygon.render(camera);
+    for (let i = 0; i < blockArray.length; i++) {
+        blockArray[i].render(camera);
+    }
     golfBall.render(camera);
 
     golfBall.physics(deltaTime);

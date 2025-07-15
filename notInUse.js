@@ -64,3 +64,7 @@ function areOverlapping(obj1, obj2) {
 
         context.fillStyle = this.color;
         context.fill();
+
+
+        drawLine({x: golfBall.position.x+golfBall.radius, y:golfBall.position.y-golfBall.radius }, {x:golfBall.position.x+golfBall.radius, y:golfBall.position.y+golfBall.radius })
+    drawLine({x: golfBall.position.x-golfBall.radius, y:golfBall.position.y-golfBall.radius }, {x:golfBall.position.x-golfBall.radius, y:golfBall.position.y+golfBall.radius })
