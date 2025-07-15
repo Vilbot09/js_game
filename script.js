@@ -10,7 +10,7 @@ const blockArray = [];
 const gameSpeed = 1;
 const gravityConstant = 1;
 const elasticity = 0.4;
-const minimumBounce = 2;
+const minimumBounce = 0.2;
 const friction = 1;
 const airResistance = 0;
 const wind = 0;
@@ -154,7 +154,7 @@ class RegularPolygon extends WorldObject{
 
         context.fillStyle = this.color;
         context.fill();
-        this.drawVertices();
+        //this.drawVertices();
         
     }
     drawVertices() {
@@ -207,7 +207,7 @@ class IrregularPolygon extends WorldObject{
        
         context.fillStyle = this.color;
         context.fill();
-        this.drawVertices();
+        //this.drawVertices();
         
     }
 
@@ -258,15 +258,19 @@ class GolfBall extends WorldObject {
         if (resolutionAxis) {
             this.position.x += 1 * resolutionAxis.x;
             this.position.y += 1 * resolutionAxis.y;
-             
-            if (Math.abs(this.velocity.y * delta * gameSpeed < minimumBounce)) {
-                this.velocity.y *= -elasticity;
-            } 
-        }
 
+            let normal = {x: resolutionAxis.x / Math.sqrt(resolutionAxis.x ** 2 + resolutionAxis.y ** 2), y: resolutionAxis.y / Math.sqrt(resolutionAxis.x ** 2 + resolutionAxis.y ** 2)}
+            const dot = this.velocity.x * normal.x + this.velocity.y * normal.y;
+            const reflectedX = this.velocity.x - (1 + elasticity) * dot * normal.x;
+            const reflectedY = this.velocity.y - (1 + elasticity) * dot * normal.y;
+
+            this.velocity.x = reflectedX;
+            this.velocity.y = reflectedY;
+
+            
+        }
     }
-    
-    collision(delta) {
+    collision() {
         let pos = this.position;
 
         //for every object you are checking with
@@ -334,7 +338,7 @@ class GolfBall extends WorldObject {
                     if (newOverlap < overlap){
                         overlap = newOverlap;
 
-                        minimumTranslationVector = axis;
+                        minimumTranslationVector = {x: axis.x*overlap, y: axis.y*overlap};
                     }
                 }
 
@@ -381,10 +385,10 @@ const camera = new Camera();
 
 const block = new Block(-250, -250, 500, 50, "black");
 
-const polygon = new RegularPolygon(150, 150, 50, 5, "green");
+const polygon = new RegularPolygon(150, 150, 50, 4, "green");
 
 //You have to manually add all of the points, you need to add them clockwise, else collision breaks
-const irregularPolygon = new IrregularPolygon(0, 0, [{x:-75, y:-200}, {x:-50, y:0}, {x: 0, y:0}], "blue")
+const irregularPolygon = new IrregularPolygon(0, 0, [{x:-400, y:-100}, {x:-50, y:0}, {x: 0, y:0}], "blue")
 
 blockArray.push(polygon)
 blockArray.push(irregularPolygon)
