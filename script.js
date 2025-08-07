@@ -3,8 +3,10 @@ const context = canvas.getContext("2d");
 
 const screenBorder = {xmin:-0.5*canvas.width, xmax:0.5*canvas.width, ymin:-0.5*canvas.height, ymax:0.5*canvas.height};
 
+let drawingVertices = [];
 const worldObjects = [];
 const blockArray = [];
+let drawingMode = false;
 
 //Physics related constants and variables
 const gameSpeed = 1;
@@ -18,13 +20,18 @@ const wind = 0;
 //This is useful for debugging, clicking on the canvas places the ball at the position of the mouse
 canvas.onmousedown = function(event) {
 
+    if (drawingMode === true) {
+        drawingVertices.push({x: event.clientX, y: event.clientY});
+    }
 
-    golfBall.position.x = event.clientX;
-    golfBall.position.y = event.clientY;
-    golfBall.velocity = {x:0, y:0}
+    else {
+        golfBall.position.x = event.clientX;
+        golfBall.position.y = event.clientY;
+        golfBall.velocity = {x:0, y:0}
 
-    golfBall.position = multiplyMatrix(golfBall.position, inverseWorldMatrix(camera))
-    golfBall.position.x -= 75;
+        golfBall.position = multiplyMatrix(golfBall.position, inverseWorldMatrix(camera))
+        golfBall.position.x -= 75;
+    }
 }
 
 function worldMatrix(camera) {
@@ -180,21 +187,21 @@ class RegularPolygon extends WorldObject{
 }
 
 class IrregularPolygon extends WorldObject{
-    constructor(x, y, vertices, color) {
+    constructor(vertices, color) {
         super();
-        this.position = {x: x, y: y};
         this.vertices = vertices;
+        
         this.color = color;
         this.edgeNormals = [];
         for(let i = 0; i < this.vertices.length-1; i++) {
             this.edgeNormals.push(calculateEdgeNormal(this.vertices[i], this.vertices[i+1]))
         }
-         this.edgeNormals.push(calculateEdgeNormal(this.vertices[this.vertices.length-1], this.vertices[0]));
+        this.edgeNormals.push(calculateEdgeNormal(this.vertices[this.vertices.length-1], this.vertices[0]));
         
     }
 
     render(camera) {
-        const screenPosition = multiplyMatrix(this.position, worldMatrix(camera));
+        const screenPosition = multiplyMatrix(this.vertices[this.vertices.length-1], worldMatrix(camera));
         
         context.beginPath();
         context.moveTo(screenPosition.x, screenPosition.y)
@@ -373,8 +380,6 @@ function drawLine(point1, point2) {
     context.closePath();
 }
 
-
-
 function calculateEdgeNormal(point1, point2) {
     let deltaX = point2.x - point1.x;
     let deltaY = point2.y - point1.y;
@@ -383,10 +388,31 @@ function calculateEdgeNormal(point1, point2) {
 
 }
 
+//Projects vector 1 onto vector 2
+function projectVector(vec1, vec2) {
+    let dot = vec1.x * vec2.x + vec1.y * vec2.y;
+    let magnitude = Math.sqrt(vec2.x ** 2 + vec2.y ** 2);
+    return dot / magnitude;
 
-function vertexSortingAlgorithm() {
+}
 
-};
+function sortVerticesClockwise(inputVertices) {
+    let vertices = inputVertices;
+    const center = {
+        x: vertices.reduce((sum, v) => sum + v.x, 0) / vertices.length,
+        y: vertices.reduce((sum, v) => sum + v.y, 0) / vertices.length
+    };
+
+    
+    vertices = vertices.slice().sort((a, b) => {
+        const angleA = Math.atan2(b.y - center.y, b.x - center.x);
+        const angleB = Math.atan2(a.y - center.y, a.x - center.x);
+        return angleB - angleA;
+    });
+    return vertices;
+
+}
+
 
 const golfBall = new GolfBall(10, "white");
 const camera = new Camera();
@@ -395,13 +421,28 @@ const camera = new Camera();
 const polygon = new RegularPolygon(150, 150, 50, 4, "green");
 
 //You have to manually add all of the points, you need to add them clockwise, else collision breaks
-const irregularPolygon = new IrregularPolygon(-100, 0, [{x:100, y:-200}, {x:-400, y:-200}, {x: -100, y:0}], "blue")
+const irregularPolygon = new IrregularPolygon([{x:100, y:-200}, {x:-400, y:-200}, {x: -100, y:0}], "blue")
 
 blockArray.push(polygon)
 blockArray.push(irregularPolygon)
 blockArray.push(new RegularPolygon(80, 2, 50, 5, "red"));
+blockArray.push(new IrregularPolygon([{x:-100, y:-100}, {x: -600, y:-100}, {x:-300, y:100}], "blue"))
 
 
+
+
+//Hold down q to activate drawing mode, the places you click before you let go will become vertices in a new polygon
+function drawIrregularPolygon(vertices) {
+    let screenVertices = sortVerticesClockwise(vertices);
+    console.log(vertices)
+
+    let objectiveVertices = []
+    for (let i = 0; i < screenVertices.length; i++){
+        objectiveVertices.push(multiplyMatrix(screenVertices[i], inverseWorldMatrix(camera)))
+    }
+    drawingVertices = []
+    blockArray.push(new IrregularPolygon(objectiveVertices, "black"));
+}
 
 const perfectFrameTime = 1000 / 60;
 let deltaTime = 0;
@@ -427,9 +468,19 @@ function update() {
 update();
 
 document.addEventListener("keydown", (e) => {
-
+    if (e.key === "q"){
+        drawingMode = true;
+        
+    }
 });
-document.addEventListener("keyup", (e) => {
 
+document.addEventListener("keyup", (e) => {
+    if (e.key === "q"){
+        drawingMode = false;
+        if (drawingVertices.length >= 3) {
+            drawIrregularPolygon(drawingVertices);
+        }
+        drawingVertices = []
+    }
 });
 
