@@ -351,6 +351,21 @@ class GolfBall extends WorldObject {
     }
 }
 
+class GolfClub extends WorldObject {
+    constructor() {
+        super();
+        this.type = "7i";
+        
+        this.image = new Image();
+        this.image.src = "./images/7i.png";
+    }
+
+    render(camera) {
+        const pos = multiplyMatrix(this.position, worldMatrix(camera));
+        context.drawImage(this.image, pos.x, pos.y, 200 * this.image.width/this.image.height, 200);
+    }
+}
+
 function drawLine(point1, point2) {
     let deltaX = point2.x - point1.x;
     let deltaY = point2.y - point1.y;
@@ -391,6 +406,8 @@ function vertexSortingAlgorithm() {
 const golfBall = new GolfBall(10, "white");
 const camera = new Camera();
 
+const club = new GolfClub();
+
 //you only need to specify position, sidelength and number of edges
 const polygon = new RegularPolygon(150, 150, 50, 4, "green");
 
@@ -412,6 +429,8 @@ function update() {
     deltaTime /= perfectFrameTime; 
     lastTimestamp = Date.now();
 
+    camera.position.x += 0.2;
+
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#00aaff";
     context.fillRect(0, 0, canvas.width, canvas.height);
@@ -419,6 +438,7 @@ function update() {
         blockArray[i].render(camera);
     }
     golfBall.render(camera);
+    club.render(camera);
 
     golfBall.physics(deltaTime);
     requestAnimationFrame(update);
