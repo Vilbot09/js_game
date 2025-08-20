@@ -8,6 +8,8 @@ const worldObjects = [];
 const blockArray = [];
 let drawingMode = false;
 
+let mousePosition = {x:0, y: 0};
+
 //Physics related constants and variables
 const gameSpeed = 1;
 const gravityConstant = 1;
@@ -240,7 +242,7 @@ class GolfBall extends WorldObject {
         super();
         this.color = color;
         this.radius = radius;
-        this.velocity = {x: 0, y: 0}
+        this.velocity = {x: 0, y: 0};
     }
 
     render(camera) {
@@ -365,11 +367,37 @@ class GolfClub extends WorldObject {
         
         this.image = new Image();
         this.image.src = "./images/7i.png";
+        this.rotation = 0;
     }
 
     render(camera) {
         const pos = multiplyMatrix(this.position, worldMatrix(camera));
-        context.drawImage(this.image, pos.x, pos.y, 200 * this.image.width/this.image.height, 200);
+
+        let angle = Math.atan2(mousePosition.y-pos.y, mousePosition.x-pos.x);
+        this.rotation = angle;
+        context.save();
+        context.translate( pos.x, pos.y );
+        context.rotate( this.rotation + 1.525*Math.PI);
+        //context.translate( -objectRotationCenterX, -objectRotationCenterY );
+        context.drawImage(this.image, 0, 0, 200 * this.image.width/this.image.height, 200);
+        context.restore();
+    }
+}
+
+class HoleAndFlag {
+    constructor(position) {
+        this.position = position;
+        this.flagImage = new Image();
+        this.flagImage.src = "./images/flag.png";
+    }
+
+    render() {
+        const pos = multiplyMatrix(this.position, worldMatrix(camera));
+
+        context.fillStyle = "black";
+        context.fillRect(pos.x, pos.y, 30, 30);
+
+        context.drawImage(this.flagImage, pos.x, pos.y-200, 200 * this.flagImage.width/this.flagImage.height, 200);
     }
 }
 
@@ -431,21 +459,28 @@ function sortVerticesClockwise(inputVertices) {
 
 const golfBall = new GolfBall(10, "white");
 const camera = new Camera();
+const hole = new HoleAndFlag({x: 300, y: 0 });
 
 const club = new GolfClub();
-
+club.position.y = 0;
 //you only need to specify position, sidelength and number of edges
-const polygon = new RegularPolygon(150, 150, 50, 4, "green");
 
 //You have to manually add all of the points, you need to add them clockwise, else collision breaks
-const irregularPolygon = new IrregularPolygon([{x:100, y:-200}, {x:-400, y:-200}, {x: -100, y:0}], "blue")
-
-blockArray.push(polygon)
-blockArray.push(irregularPolygon)
-blockArray.push(new RegularPolygon(80, 2, 50, 5, "red"));
-blockArray.push(new IrregularPolygon([{x:-100, y:-100}, {x: -600, y:-100}, {x:-300, y:100}], "blue"))
 
 
+
+// Grass
+blockArray.push(new RegularPolygon(200, -200, 400, 4, "green"))
+blockArray.push(new RegularPolygon(550, -50, 200, 3, "green"))
+
+//blockArray.push(new RegularPolygon(80, 2, 50, 5, "red"));
+//blockArray.push(new IrregularPolygon([{x:100, y:-200}, {x:-400, y:-200}, {x: -100, y:0}], "blue"))
+//blockArray.push(new IrregularPolygon([{x:-100, y:-100}, {x: -600, y:-100}, {x:-300, y:100}], "blue"))
+
+// Stones
+blockArray.push(new RegularPolygon(200, -200, 400, 4, "green"))
+blockArray.push(new IrregularPolygon([{x:-300, y:400}, {x:-600,y:0}, {x:-600, y: 300}], "gray"))
+blockArray.push(new IrregularPolygon([{x:-600, y:0}, {x:0,y:-300}, {x:-600, y: -300}], "gray"))
 
 
 //Hold down q to activate drawing mode, the places you click before you let go will become vertices in a new polygon
@@ -470,7 +505,8 @@ function update() {
     deltaTime /= perfectFrameTime; 
     lastTimestamp = Date.now();
 
-    camera.position.x += 0.2;
+    // camera.position.x += 0.2;
+    club.rotation += -0.01;
 
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#00aaff";
@@ -478,6 +514,8 @@ function update() {
     for (let i = 0; i < blockArray.length; i++) {
         blockArray[i].render(camera);
     }
+
+    hole.render();
     golfBall.render(camera);
     club.render(camera);
 
@@ -486,6 +524,18 @@ function update() {
 };
   
 update();
+
+const getMousePos = (canvas, evt) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: ((evt.clientX - rect.left) / (rect.right - rect.left)) * canvas.width,
+        y: ((evt.clientY - rect.top) / (rect.bottom - rect.top)) * canvas.height,
+    };
+};
+
+document.addEventListener('mousemove', (e) => {
+    mousePosition = getMousePos(canvas, e);
+});
 
 document.addEventListener("keydown", (e) => {
     if (e.key === "q"){
