@@ -19,9 +19,20 @@ const friction = 1;
 const airResistance = 0;
 const wind = 0;
 
-//This is useful for debugging, clicking on the canvas places the ball at the position of the mouse
-canvas.onmousedown = function(event) {
+function getMousePos(evt) {
+  var rect = canvas.getBoundingClientRect();
+  console.log({
+    x: evt.clientX - rect.left,
+    y: evt.clientY - rect.top
+  })
+  return {
+    clientX: evt.clientX - rect.left,
+    clientY: evt.clientY - rect.top
+  };
+}
 
+canvas.onmousedown = function(e) {
+    let event = getMousePos(e);
     if (drawingMode === true) {
         drawingVertices.push({x: event.clientX, y: event.clientY});
     }
@@ -32,7 +43,6 @@ canvas.onmousedown = function(event) {
         golfBall.velocity = {x:0, y:0}
 
         golfBall.position = multiplyMatrix(golfBall.position, inverseWorldMatrix(camera))
-        golfBall.position.x -= 75;
     }
 }
 
