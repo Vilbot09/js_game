@@ -68,3 +68,31 @@ function areOverlapping(obj1, obj2) {
 
         drawLine({x: golfBall.position.x+golfBall.radius, y:golfBall.position.y-golfBall.radius }, {x:golfBall.position.x+golfBall.radius, y:golfBall.position.y+golfBall.radius })
     drawLine({x: golfBall.position.x-golfBall.radius, y:golfBall.position.y-golfBall.radius }, {x:golfBall.position.x-golfBall.radius, y:golfBall.position.y+golfBall.radius })
+
+
+    function vertexSortingAlgorithm(polygon) {
+    let rightVertices = [];
+    let leftVertices = [];
+    for (let i = 0; i < polygon.vertices.length; i++) {
+        if (polygon.vertices[i].x > polygon.position.x) {
+            rightVertices.push(polygon.vertices[i]);
+        }
+        if (polygon.vertices[i].x <= polygon.position.x) {
+            leftVertices.push(polygon.vertices[i]);
+        }
+    }
+
+    let sortedVertices = []
+    let maximumVertex = {}
+    let maxVertexValue = 0;
+
+    for (let i = 0; i < rightVertices.length; i++) {
+        for (let i = 0; i < rightVertices.length; i++) {
+            if (projectVector({x: rightVertices[i].x - pol, y: 1}, {x: 0, y: 1})){}
+        }
+
+
+        rightVertices.splice(rightVertices.indexOf(maximumVertex))
+        sortedVertices.push(maximumVertex)
+    }
+};
