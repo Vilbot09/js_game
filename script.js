@@ -18,7 +18,7 @@ const minimumBounce = 0.2;
 const friction = 1;
 const airResistance = 0;
 const wind = 0;
-
+/*
 function getMousePos(evt) {
   var rect = canvas.getBoundingClientRect();
   console.log({
@@ -29,7 +29,7 @@ function getMousePos(evt) {
     clientX: evt.clientX - rect.left,
     clientY: evt.clientY - rect.top
   };
-}
+}*/
 
 canvas.onmousedown = function(e) {
     let event = getMousePos(e);
@@ -411,6 +411,14 @@ class HoleAndFlag {
     }
 }
 
+const getMousePos = (evt) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: ((evt.clientX - rect.left) / (rect.right - rect.left)) * canvas.width,
+        y: ((evt.clientY - rect.top) / (rect.bottom - rect.top)) * canvas.height,
+    };
+};
+
 function drawLine(point1, point2) {
     let deltaX = point2.x - point1.x;
     let deltaY = point2.y - point1.y;
@@ -535,16 +543,8 @@ function update() {
   
 update();
 
-const getMousePos = (canvas, evt) => {
-    const rect = canvas.getBoundingClientRect();
-    return {
-        x: ((evt.clientX - rect.left) / (rect.right - rect.left)) * canvas.width,
-        y: ((evt.clientY - rect.top) / (rect.bottom - rect.top)) * canvas.height,
-    };
-};
-
 document.addEventListener('mousemove', (e) => {
-    mousePosition = getMousePos(canvas, e);
+    mousePosition = getMousePos(e);
 });
 
 document.addEventListener("keydown", (e) => {
